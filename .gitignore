@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.venv/
+env/
+
+# Database & Screen captures (Keep your database private!)
+Haris_Brian-main/instance/
+Haris_Brian-main/static/screenshots/
+*.sqlite
+*.db
+
+# AI Models (Users should download these automatically upon running)
+*.pt
+*.task
+yolov8n.pt
+pose_landmarker_full.task
+
+# Node.js
+haris/node_modules/
+haris/dist/
+npm-debug.log*
+
+# OS specific
+.DS_Store
+Thumbs.db

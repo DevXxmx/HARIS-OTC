@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg-deep: #080808;
+    --color-bg-surface: #111111;
+    --color-bg-raised: #1a1a1a;
+    --color-border: #2a2a2a;
+    --color-muted: #3d3d3d;
+    --color-grey-mid: #6b6b6b;
+    --color-grey-light: #a0a0a0;
+    --color-white-soft: #e8e8e8;
+    --color-red-hot: #ff1a1a;
+    --color-red-mid: #cc2200;
+    --color-red-dim: #3d0a00;
+    --color-red-glow: rgba(255,26,26,0.15);
+  }
+
+  body {
+    background-color: var(--color-bg-deep);
+    color: var(--color-white-soft);
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    z-index: 9999;
+  }
+}
