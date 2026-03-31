@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../api';
 
 export default function CameraFeed() {
   const [time, setTime] = useState('');
+  const [streamError, setStreamError] = useState(false);
 
   useEffect(() => {
     const updateTime = () => setTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
@@ -20,15 +22,29 @@ export default function CameraFeed() {
       style={{ perspective: '1000px' }}
     >
       {/* Live AI Video Stream from Backend */}
-      <img 
-        src="http://localhost:5000/api/stream"
-        alt="Live Camera Feed"
-        className="absolute inset-0 w-full h-full object-cover filter grayscale-[20%] contrast-[1.05]"
-      />
+      {streamError ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-grey-mid font-mono text-sm tracking-widest">
+          <div className="w-3 h-3 rounded-full bg-grey-mid animate-pulse" />
+          <span>STREAM UNAVAILABLE</span>
+          <button
+            onClick={() => setStreamError(false)}
+            className="text-xs border border-border px-3 py-1 hover:border-grey-mid transition-colors mt-2"
+          >
+            RETRY
+          </button>
+        </div>
+      ) : (
+        <img
+          src={`${API_BASE}/api/stream`}
+          alt="Live Camera Feed"
+          className="absolute inset-0 w-full h-full object-cover filter grayscale-[20%] contrast-[1.05]"
+          onError={() => setStreamError(true)}
+        />
+      )}
 
       {/* CSS Scanline Sweep */}
       <div className="absolute inset-0 pointer-events-none z-10 scanline-sweep" />
-      
+
       {/* Corner Brackets */}
       <div className="absolute top-4 left-4 w-8 h-8 border-t-[3px] border-l-[3px] border-red-dim z-20" />
       <div className="absolute top-4 right-4 w-8 h-8 border-t-[3px] border-r-[3px] border-red-dim z-20" />
@@ -37,8 +53,8 @@ export default function CameraFeed() {
 
       {/* Top Left Badge */}
       <div className="absolute top-6 left-6 flex items-center gap-2 z-20">
-        <motion.div 
-          animate={{ opacity: [1, 0, 1] }} 
+        <motion.div
+          animate={{ opacity: [1, 0, 1] }}
           transition={{ repeat: Infinity, duration: 1.5 }}
           className="w-3 h-3 bg-red-hot rounded-full shadow-[0_0_8px_var(--color-red-glow)]"
         />
@@ -53,8 +69,6 @@ export default function CameraFeed() {
           {time}
         </span>
       </div>
-
-
 
       {/* Internal styles for custom animations */}
       <style>{`

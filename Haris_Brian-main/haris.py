@@ -74,12 +74,16 @@ def draw_pose(frame, landmarks, h, w):
         cv2.circle(frame, (x, y), 4, (0, 255, 0), -1, cv2.LINE_AA)
 
 def check_pocket(landmarks):
-    """Detect if hands are close to hip landmarks."""
+    """Detect if hands are very close to hip landmarks with a tighter threshold."""
     r_wrist, r_hip = landmarks[16], landmarks[24]
     l_wrist, l_hip = landmarks[15], landmarks[23]
+    
+    # Calculate Euclidean distance between wrist and hip
     dist_r = math.sqrt((r_wrist.x - r_hip.x)**2 + (r_wrist.y - r_hip.y)**2)
     dist_l = math.sqrt((l_wrist.x - l_hip.x)**2 + (l_wrist.y - l_hip.y)**2)
-    return dist_r < 0.20, dist_l < 0.20
+    
+    # Returns True only if the hand is significantly close to the hip
+    return dist_r < POCKET_THRESHOLD, dist_l < POCKET_THRESHOLD
 
 def capture_and_save(frame):
     os.makedirs("static/screenshots", exist_ok=True)
@@ -103,14 +107,18 @@ def capture_and_save(frame):
 
 # --- 6. MAIN LOOP ---
 
+LAST_CAPTURE_TIME = 0
+COOLDOWN_SECONDS = 0.5  # Seconds to wait between screenshots
+POCKET_THRESHOLD = 0.12  # Lowered from 0.20 to reduce false positives
+
+
 def generate_frames():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Error: Could not open camera.")
         return
 
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    frame_index = 0
+    fps = cap.get(cv2.CAP_PROP_FPS) or 60.0
 
     print("Live Stream Detection Running... Streaming to web.")
 
@@ -119,39 +127,43 @@ def generate_frames():
             ret, frame = cap.read()
             if not ret: break
             
-            frame_index += 1
-            h, w = frame.shape[:2]
             timestamp_ms = int(time.time() * 1000)
+            h, w = frame.shape[:2]
 
             # --- PHASE A: YOLO OBJECT DETECTION ---
             yolo_results = yolo_model(frame, conf=0.4, verbose=False)[0]
-            persons = []
-            objects = []
+
+            person_boxes = []
+            object_boxes = []
 
             for box in yolo_results.boxes:
                 cls_id = int(box.cls[0])
                 label = yolo_model.names[cls_id]
-                coords = map(int, box.xyxy[0])
-                x1, y1, x2, y2 = coords
+                coords = box.xyxy[0].tolist()  # [x1, y1, x2, y2]
 
                 if label == "person":
-                    persons.append((x1, y1, x2, y2))
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 100, 0), 2)
+                    person_boxes.append(coords)
                 else:
-                    objects.append((x1, y1, x2, y2, label))
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 200, 0), 1)
+                    object_boxes.append(coords)
 
-            # Check YOLO holding logic
+            # Check proximity: is any object box close to any person box?
             holding_detected = False
-            for (px1, py1, px2, py2) in persons:
-                prox_px = int((py2 - py1) * PROXIMITY_RATIO)
-                for (ox1, oy1, ox2, oy2, _) in objects:
-                    if boxes_are_close((px1, py1, px2, py2), (ox1, oy1, ox2, oy2), prox_px):
+            for person_box in person_boxes:
+                for obj_box in object_boxes:
+                    if boxes_are_close(person_box, obj_box, fps):
                         holding_detected = True
                         break
-            
+                if holding_detected:
+                    break
+
+            # Overlay a label on the frame when holding is detected
             if holding_detected:
-                cv2.putText(frame, "HOLDING OBJECT", (20, 80), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 255), 2)
+                cv2.putText(
+                    frame, "HOLDING OBJECT",
+                    (20, 80),
+                    cv2.FONT_HERSHEY_DUPLEX,
+                    1, (0, 255, 255), 2
+                )
 
             # --- PHASE B: MEDIAPIPE POSE DETECTION ---
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -162,14 +174,14 @@ def generate_frames():
                 for pose_landmarks in pose_result.pose_landmarks:
                     draw_pose(frame, pose_landmarks, h, w)
                     right_in, left_in = check_pocket(pose_landmarks)
-
-                    # Hand in pocket alerts
-                    if right_in and left_in:
-                        cv2.putText(frame, 'BOTH HANDS IN POCKETS!', (20, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                                        
+                    # Use a cooldown to prevent the DB/File I/O from freezing the loop repeatedly
+                    current_time = time.time()
+                    if (right_in and left_in) and holding_detected:
+                        # Trigger the slow save/DB operations
                         capture_and_save(frame)
-                    elif right_in or left_in:
-                        cv2.putText(frame, 'ONE HAND IN POCKET', (20, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
-                        capture_and_save(frame)
+                        #if current_time - LAST_CAPTURE_TIME >= COOLDOWN_SECONDS:   
+                        #    LAST_CAPTURE_TIME = current_time
 
             # --- PHASE C: FINAL STREAM OUTPUT ---
             ret_enc, buffer = cv2.imencode('.jpg', frame)

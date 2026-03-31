@@ -2,8 +2,6 @@
 
 A professional, real-time AI-powered security camera dashboard built on modern architectural principles. The system uses YOLOv8 for object detection and MediaPipe for full-body tracking, streaming intelligent analytics over MJPEG to a decoupled React Dashboard. 
 
-![Dashboard Overview](haris/public/vite.svg) (*Add a screenshot of your dashboard here*)
-
 ## 🌟 Key Features
 * **Live AI Vision:** Detects persons, objects, and deeply specific security behaviors (e.g. "Hands in Pockets") via OpenCV arrays.
 * **Cyber-Noir Dashboard:** A high-performance React front-end inspired by cinematic security systems using custom CSS and `framer-motion` for complex animations.

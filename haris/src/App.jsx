@@ -1,9 +1,16 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/Navbar';
 import LivePage from './pages/LivePage';
 import AlertsPage from './pages/AlertsPage';
+import AboutPage from './pages/AboutPage';
+import LoginPage from './pages/LoginPage';
+
+function PrivateRoute({ children }) {
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -11,10 +18,11 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageTransition><LivePage /></PageTransition>} />
-        <Route path="/live" element={<PageTransition><LivePage /></PageTransition>} />
-
-        <Route path="/alerts" element={<PageTransition><AlertsPage /></PageTransition>} />
+        <Route path="/" element={<PrivateRoute><PageTransition><LivePage /></PageTransition></PrivateRoute>} />
+        <Route path="/live" element={<PrivateRoute><PageTransition><LivePage /></PageTransition></PrivateRoute>} />
+        <Route path="/alerts" element={<PrivateRoute><PageTransition><AlertsPage /></PageTransition></PrivateRoute>} />
+        <Route path="/about" element={<PrivateRoute><PageTransition><AboutPage /></PageTransition></PrivateRoute>} />
+        <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   );
@@ -45,13 +53,22 @@ function PageTransition({ children }) {
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex flex-col font-rajdhani">
-        <Navbar />
-        <main className="flex-1 w-full relative">
-          <AnimatedRoutes />
-        </main>
-      </div>
+      <AppContent />
     </BrowserRouter>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const showNavbar = location.pathname !== '/login';
+
+  return (
+    <div className="min-h-screen flex flex-col font-rajdhani">
+      {showNavbar && <Navbar />}
+      <main className="flex-1 w-full relative">
+        <AnimatedRoutes />
+      </main>
+    </div>
   );
 }
 
